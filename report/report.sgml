@@ -1,0 +1,1028 @@
+<?xml version='1.0'?>
+<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook V4.1//EN" [
+<!ENTITY adt "<acronym>ADT</acronym>">
+<!ENTITY stl "<acronym>STL</acronym>">
+<!ENTITY java '<trademark class="trade">Java</trademark>'>
+<!ENTITY rdsl "<acronym>RDSL</acronym>">
+]>
+<book>
+
+<bookinfo>
+    <title>An Assessment of the Necessity, Possibility, and
+    Implementation of an Algorithm and &adt; Library for the Programming
+    Language Ruby</title>
+    <subtitle>A Report for the Algorithms, Advanced Course at Gothenburg
+    University, fall of 2002</subtitle>
+    <author>
+	<firstname>Nikolai</firstname>
+	<surname>Weibull</surname>
+	<othername role="mi">:: lone-star ::</othername>
+    </author>
+    <pubdate>4th December 2002</pubdate>
+    <copyright>
+	<year>2002</year>
+	<holder>Nikolai Weibull</holder>
+    </copyright>
+    <revhistory>
+	<revision>
+	<revnumber>1.0</revnumber>
+	    <date>4th December 2002</date>
+	    <authorinitials>lone-star</authorinitials>
+	    <revremark>First release</revremark>
+	</revision>
+    </revhistory>
+
+    <abstract>
+	<para>This paper describes the design process of the &rdsl; &adt; and
+	algorithm library for the programming language Ruby.  It discusses
+	various other libraries that exist for other programming languages and
+	their design principles and together with a discussion of the design
+	principles of the target language, Ruby, arrives at a design
+	specification.  Further, it discusses the final design of the library
+	and also discusses future work from the conclusions drawn from the
+	development of the library so far.</para>
+
+	<para>The library and thus this paper is still in a volatile state and
+	thus parts of this paper will be updated with further, and more
+	accurate, information as work progresses.  So to stay current, return
+	to where you found this paper often to find updated revisions of
+	it.</para>
+    </abstract>
+</bookinfo>
+
+<chapter>
+    <title>Introduction</title>
+
+    <para>The world of programming is becoming more and more structured.
+    People spend a lot more time and effort on making things as generic and
+    reusable as possible than they did previously.  This has lead to many so
+    called <emphasis>libraries</emphasis> of reusable code.  Their contents
+    range from media processing to graph algorithms or Abstract Data Types.
+    The focus of this paper is those of the latter kind.</para>
+
+    <para>Today there exists more programming languages than there has ever
+    done in the past.  Each has its own focus and applicability, and often
+    provide libraries of varying contents and size.  The focus in this paper
+    will be on the Ruby<footnote><para>
+    <ulink url="http://www.ruby-lang.org/">The Ruby language's homepage</ulink>
+    </para></footnote>
+    programming language.  Even though the language comes with some of the most
+    important Abstract Data Types (from now on abbreviated &adt;) built into
+    the language, it lacks an extension library with more specialized
+    algorithms and &adt;s.  Under these circumstances it seemed of interest to
+    write a library that would provide users of the language with some of the
+    algorithms and &adt;s that the basic language lacks.</para>
+
+    <para>Since the aim is to write a library of reusable code it is natural to
+    look at already written libraries for other languages and tasks.  This
+    gives an idea of how others have done, and what the overall structure
+    should be like and so on.  A discussion of some of these libraries is given
+    in <xref linkend="chapter.existing_libraries">.</para>
+
+    <para><xref linkend="chapter.ruby"> discusses the language we are
+    implementing the library for, Ruby.  It gives a general idea of the
+    different constructs in the language which are of use to us.  It also gives
+    some thoughts on the implementation of the library and makes some
+    comparisons with other languagues and their constructs.</para>
+
+    <para>In the following chapter the a description of the library itself, its
+    contents, its documentation, and testing framework, is discussed.  It
+    explains some of the design decisions that were made before the library was
+    written and some of the &adt;s and algorithms that were meant to go into
+    it.</para>
+
+    <para>In <xref linkend="chapter.work-done"> one will find some information
+    about what work has already been done for the library.  It describes the
+    layout of the library and some of the interfaces of the classes.  It also
+    discusses running time comparions of the various algorithms and &adt;, both
+    those built into Ruby itself, and those added by the library.</para>
+
+    <para><xref linkend="chapter.conclusion"> and <xref
+    linkend="chapter.future"> discuss what has been learnt during the
+    development of the library and where it is heading in the future.</para>
+    
+</chapter>
+
+<chapter id="chapter.existing_libraries">
+    <title>Existing Libraries</title>
+
+    <para>A lot of quite extensive libraries exist for various programming
+    languages today.  Some of the design principles and what they include
+    algorithm- and &adt;-wise will be discussed in this section.</para>
+
+    <sect1>
+	<title>An overview</title>
+
+	<highlights>
+	<para>We will study the following libraries in turn:</para>
+	<itemizedlist>
+	    <listitem><para>&stl; for C++</para></listitem>
+	    <listitem><para><acronym>GLib</acronym> for C</para></listitem>
+	    <listitem><para>The Standard Library for &java;</para></listitem>
+	</itemizedlist>
+	</highlights>
+
+	<para>This is by no means a complete coverage of the libraries
+	available, but perhaps the most used ones.  Each of the following
+	sections will delve deeper into the intricacies of each.</para> 
+    </sect1>
+
+    <sect1>
+	<title>STL</title>
+	
+	<para>The <emphasis>Standard Template
+	Library</emphasis><footnote><para><ulink
+	url="http://www.sgi.com/tech/stl/">The &stl; documentation
+	site</ulink></para></footnote>, or
+	&stl;, is the library of &adt;s and algorithms that (hopefully)
+	comes with most <acronym>ANSI</acronym> compliant C++
+	compilers.  Its main theme is that of iterators and containers.  These
+	two concepts are used throughout, and almost all of the external
+	interface revolves around them.</para>
+
+	<para>The concept of <emphasis>iterators</emphasis> and containers
+	is something that has always existed in programming, but has never been
+	abstracted before the advent of Object-Oriented Programming.  Probably
+	one of the greatest influences on their abstraction is the &stl;.
+	Iterators as a construct or data type existed in the programming
+	language SmallTalk long before the Standard Template Library, but it
+	was not before it became obvious how useful it would be in the &stl;
+	that it got any greater thought.  Gamma <xref linkend="Gamma95"> says,
+	<quote>[Iterators] provide a way to access the elements of an aggregate
+	object sequentially without exposing its underlying
+	representation</quote>.  The engineers of the &stl; takes this even
+	further, allowing iterators to access the elements in a random fashion
+	and in any direction.  With sub-classing it is possible for many
+	different containers to provide iterations with the same kind of
+	iterators.</para>
+
+	<para><emphasis>Containers</emphasis>, what Gamma
+	<xref linkend="Gamma95"> calls <emphasis>aggregate objects</emphasis>,
+	are simply what we often refer to as &adt;s.  The &stl; uses
+	sub-classing to define many different kinds of containers, with uniform
+	interfaces, that act in slightly different ways.  Some sort their data,
+	some can contain multiples of the same element, and some rely on
+	hashing to associate keys to values.</para>
+
+	<para>The &stl; also uses something it calls
+	<emphasis>Functors</emphasis> for a lot of tasks.  It is basically an
+	abstraction of what is known as a function pointer in C and C++.  The
+	notion of functors is useful in algorithms such as
+	<function>for_each</function> where the user is allowed to do something
+	with each element in a container.</para>
+
+	<para>By now one gets the feeling that the &stl; is very well thought
+	through and complete, and yes &mdash; it is clever, and yes &mdash; it
+	is large, but it is perhaps not as useful as one would wish.  The
+	containers it provides are great; you have vectors, deques, lists,
+	sets and maps in various shapes and sizes. Sadly, however, as many have
+	pointed out, only the fast algorithms and operations on them are
+	implemented. Secondly, many of the algorithms provided are not of great
+	use in everyday programming. Thirdly, it requires a lot of your C++
+	(not to mention your C++ skills as a programmer) compiler and with the
+	extensive use of templating, which also makes the code unreadable,
+	compilation can be slow and potential error messages can be very hard
+	to interpret. Other than that it is a great library to use.</para>
+    </sect1>
+
+    <sect1>
+	<title>GLib</title>
+
+	<para>The <emphasis>Gimp Library</emphasis><footnote><para><ulink
+	url="http://developer.gnome.org/doc/API/2.0/glib/index.html">The GLib
+	documentation site</ulink></para></footnote>, abbreviated
+	<acronym>GLib</acronym>, is the programming language C's answer to the
+	&stl;.  It is not as extensive and as object oriented as the &stl; (or
+	even standard), but it is very useful, and well used, in the realm of
+	C.  It does not rely on the concept of iterators or containers, even
+	though the library actually provides the C language with object
+	orientation constructs. It contains all the standard &adt;s, such as
+	lists, deques, hash tables (maps), arrays (vectors), trees, and some
+	interesting memory allocation algorithms.  It is mostly thought of as a
+	library to provide the basics of programming to the C language, not as
+	an advanced library for advanced uses.  It simply makes everyday
+	programming with C a whole lot easier.</para>
+    </sect1>
+
+    <sect1>
+	<title>The Standard Library for Java</title>
+
+	<para>The &java; 2 Platform<footnote><para><ulink
+	url="http://java.sun.com/j2se/1.4.1/docs/api/">The &java; 2 Platform
+	documentation site</ulink></para></footnote> comes with a huge standard
+	library.  A part of it is devoted to &adt;s.  It, like the &stl; for
+	C++, relies on iterators to deal with the elements in collections;
+	where collections is simply Java's name for containers.  The library
+	for Java contains a lot of the standard &adt;s and is generally useful.
+	In comparison to the previously discussed libraries, &stl; and
+	<acronym>GLib</acronym>, it can be viewed as a mixture of the two.  It
+	is far from as abstract and well designed as the &stl;, but it uses
+	object orientation to a greater extent than <acronym>GLib</acronym>
+	does.  Its iteration support is not the most intuitive there is and it
+	shows that it has been kind of tagged on as an extension, rather than
+	as a building block.</para>
+    </sect1>
+
+    <sect1>
+	<title>In Conclusion</title>
+
+	<para>We have seen that there are a few different libraries for various
+	different programming languages, implementing most of the standard
+	&adt;s and algorithms.  The &stl; for C++ goes the furthest, with a
+	large degree of abstraction allowing for very clean use, whereas the
+	other two libraries discussed exist to provide a quick-and-dirty way
+	for programmers to access the most standard building-blocks of computer
+	programming.</para>
+    </sect1>
+
+</chapter>
+
+<chapter id="chapter.ruby">
+    <title>Ruby: The Language and Implementation Issues</title>
+
+    <para>This project is about implementing a library of algorithms and data
+    structures for a specific language, namely Ruby.  To do this effectively
+    one must study the language itself, and what it provides to the user.
+    There are some main points one strives for when writing generic and
+    abstract code.  Some of the more interesting and relevant will be discussed
+    in this section.</para>
+
+    <sect1 id="generality">
+	<title>Generality and Algorithm/Data-Structure Interoperability</title>
+
+	<para>One of the biggest issues faced when implementing an &adt; is how
+	to make it abstract enough.  You want the user to be able to use it for
+	any kind of data, yet you want it to be effective and clean.  In a
+	programming language such as C all you have at your disposal is
+	<type>void *</type> and perhaps function pointers.  C++ on the other
+	hand allows for parameterization as a way to achieve generality.  A
+	<type>list</type> is given a parameter that tells C++ exactly what kind
+	of elements are in the list.  When writing the list, no care is
+	necessary to deal with different kinds of types, you simply say that
+	you are dealing with a certain type, whatever it may be.  But you are
+	forced to declare this a long time before you even enter the data into
+	it, which may be hard to do (even impossible in some cases) and you are
+	forced to store the same type of data in the list.</para>
+
+	<para>Enter Ruby.</para>
+
+	<para>Ruby is a dynamically typed language, so an &adt; does not need
+	any information whatsoever about it to operate.  This makes dealing
+	with this issue extremely simple.  In Ruby's built in Hash
+	data-structure the only requirement on the keys is that they implement
+	a hashing function, and respond to <methodname>eql?</methodname>.  These
+	are part of the <classname>Object</classname> class, so no thought to
+	this is necessary either.</para>
+
+	<para>For interoperability one can use Ruby's notion of multiple
+	inheritance, called <emphasis>Mix-ins</emphasis>.  As an example we can
+	use the &adt; <emphasis>Treap</emphasis> <xref linkend="Mora95">,
+	<xref linkend="Nils97">, <xref linkend="Reid98">.  A Treap is a
+	combination of a Tree structure and a Heap structure.  It is similar to
+	a Hash table, except that it keep its keys sorted.  But how do we keep
+	the keys sorted?  We require the keys to be comparable in some way, so
+	we know their relative order.  This is where the
+	<classname>Comparable</classname> mix-in makes its entrance.  Requiring
+	that the
+	<emphasis>including</emphasis><footnote><para><quote>Properties
+	(methods and constants) defined by a module can be added to a class or
+	another module with the include method.</quote> <xref
+	linkend="Matsumoto02"></para></footnote> class or object implements the
+	<methodname>&lt;=&gt;</methodname> method it provides it with a score of
+	other methods useful when comparing objects of the same type.  Now this
+	class can be used as keys in the Treap, and as all of the
+	standard/built-in data types include <classname>Comparable</classname>
+	no extra work on their behalf is necessary either.</para>
+    </sect1>
+
+    <sect1>
+	<title>Iterators and Functors</title>
+
+	<para>Iterators is what makes Ruby.  Ruby has the notion of block
+	structures, often called closures &mdash; but they do not necessarily
+	have to be, that can be very useful during iteration.  In <xref
+	linkend="example.iterators.stl"> we have the &stl; way of defining the
+	<methodname>find</methodname> algorithm.  An equivalent in Ruby looks
+	like the one in <xref linkend="example.iterators.ruby">.</para>
+	
+	<para>Some explanation to the <xref linkend="example.iterators.ruby">
+	may be necessary.  It doesn't really work.  It is a part of a module
+	called Enumerable.  Enumerable is a mix-in (described in <xref
+	linkend="generality">) that uses the including class or objects
+	<methodname>each</methodname> method to implement a lot of algorithms
+	dealing with iteration over the objects in a set.  The
+	<methodname>find</methodname> method it defines takes a block and for each
+	element in the set it <methodname>yield</methodname>s it and if the block
+	returns true the object has been found.</para>
+
+	<para>But wait!  What are blocks, and what does yielding mean?  Well in
+	fact the <methodname>each</methodname> method call (see <xref
+	linkend="example.iterators.ruby">) takes a block and yields each
+	element to it.  That is what is going on in the Ruby version of
+	<methodname>find</methodname>.  The block is the code between the
+	<methodname>do-end</methodname>
+	constructs.  The <literal>|e|</literal> is the yielded element, so it
+	is basically a functor or a lambda abstraction.  The
+	<methodname>yield</methodname> is simply the construct for saying what
+	we are passing to the block.</para>
+
+	<example id="example.iterators.stl">
+	<title>&stl; <methodname>find</methodname> Algorithm</title>
+	<programlisting>
+template &lt;class InputIterator, class T&gt; InputIterator
+find(InputIterator first, InputIterator last, const T&amp; value)
+{
+    while (first != last && *first != value)
+	++first;
+    return first;
+}
+	</programlisting>
+	</example>
+
+	<example id="example.iterators.ruby">
+	<title>Ruby <methodname>find</methodname> Algorithm</title>
+	<programlisting>
+def find
+    each do |item| return true if yield item end
+end
+	</programlisting>
+	</example>
+    </sect1>
+
+    <sect1 id="sect1.implementation.issues">
+	<title>Implementation Issues and Thoughts</title>
+
+	<para>From the above discussions it should be clear that many of our
+	tasks are already dealt with in the language.  Now, most of the thought
+	should go into figuring out interfaces, structural layout, and what to
+	include in the library.</para>
+
+	<para>The &stl; uses the <classname>Container</classname> virtual class
+	with various sub-classes, to produce a whopping four levels of
+	sub-classing.  This is necessary in a strongly-typed language such as
+	C++ to describe the way various abstract objects are guaranteed to
+	act.  Not so in Ruby.  As stated in <xref linkend="generality">, Ruby
+	does not care what type an object is before it is necessary to know.
+	It simply asks the object if it responds to a certain method and if
+	not, OK. Well, not OK, you get an ugly exception, but in a sense that
+	can be OK.</para>
+
+	<para>However, we can use the notion of sub-dividing like this in Ruby
+	using mix-ins.  The idea is to provide as much of the functionality
+	<emphasis>outside</emphasis> of the actual &adt;.  For example, methods
+	such as <methodname>keys</methodname> or <function>values</function> that
+	return an <classname>Array</classname> of the keys and values in an
+	<classname>Association</classname> only needs the
+	<methodname>each</methodname> method from the including class.  Well,
+	actually they use the <methodname>each_key</methodname> and
+	<methodname>each_value</methodname> methods resectively, but they are also
+	defined in <classname>Association</classname> (using
+	<methodname>each</methodname>) but can be overriden if necessary.
+	<note><title>Note</title>
+	    <para>This is similar to the way almost all algorithms in the &stl;
+	    are defined at the top-level, but instead of saying
+	    <quote>this function works for any association</quote> we say
+	    <quote>each association has this function</quote>.  In a sense this
+	    feels more natural, and it does not clutter the top-level namespace
+	    either!</para>
+	</note>
+	</para>
+    </sect1>
+
+</chapter>
+
+<chapter>
+    <title>The &rdsl; Library for Ruby</title>
+
+    <para>This chapter is a description of the design and layout of the
+    &rdsl;<footnote><para>&rdsl; stands for Ruby Data-Structure Library; in
+    search of a better name.</para></footnote>
+    library for Ruby.  It is the library developed by the author and thus here
+    follows the conciderations and a discussion of the work on it so far as
+    done by the author.</para>
+
+    <sect1 id="library-contents">
+	<title>Contents of The Library</title>
+
+	<para>Ruby comes with classes for arrays and hash tables built into the
+	language.  Ruby arrays, whose classname is <classname>Array</classname>
+	unsurprisingly, can also act like stacks, queues, lists, and deques.
+	So none of these &adt;s are of interest to implement in our library.
+	But they define the interface (see <xref linkend="Matsumoto02"> for a
+	description) to which we shall try to stick to in our
+	library, as we want to maintain the <emphasis>principle of least
+	surprise</emphasis>, which is Rubys main theme.  It states that
+	everything in the language should work exactly like you would expect it
+	to.  So if we keep the interfaces similar to those of the built-ins, we
+	should be doing fine.</para>
+
+	<para>The project will start out with the following &adt;s and
+	algorithms to set an example on how the rest of the project will
+	develop.</para>
+
+	<para>First the &adt;s.
+	<itemizedlist>
+	    <listitem><para>Treap</para></listitem>
+	    <listitem><para>Skiplist</para></listitem>
+	</itemizedlist>
+	These are interesting since they use randomicity to achieve their
+	goals.</para>
+
+	<para>And the algorithms.  The following list are some string matching
+	algorithms that we can easily build into the built-in class
+	<classname>String</classname>.
+	<itemizedlist>
+	    <listitem><para>Knuth-Morris-Pratt</para></listitem>
+	    <listitem><para>Boyer-Moore-Horspool</para></listitem>
+	</itemizedlist>
+	These are interesting because the first is the theoretically fastest
+	string matching algorithm, whereas the second is claimed to be the
+	fastest in practice.  Here we will have a chance to see if this is
+	true.  We can also compare it to Rubys built in string matching.
+	Results of this comparison will be shown in
+	<xref linkend="results">.</para>
+
+	<para>To build the library we will use the design decisions discussed
+	in <xref linkend="sect1.implementation.issues">.  The basic hierarchy
+	will be similar to the one found in the &stl;.  A
+	<classname>Container</classname> mix-in module will be a the top,
+	implmenting things all containers need.  Under it we will find
+	<classname>Association</classname> which implements most of the
+	key-value related &adt; algorithms.  Finally, we have
+	<classname>SortedAssociation</classname> which will be mixed-into both
+	the <classname>Treap</classname> and <classname>Skiplist</classname>
+	classes.</para>
+
+	<para>For the string search algorithms all we need to do is simply
+	extend the <classname>String</classname> with a new
+	<methodname>index</methodname> method, to hook in our code.  The index
+	method takes as parameters something to search for and an offset to
+	start at.  What to search for can be either an
+	<classname>Integer</classname> to search for a character code, a
+	<classname>Regexp</classname> to search for a regular expression, or a
+	string.  We simply <emphasis>alias</emphasis><footnote><para>A way of
+	getting a new name for a method</para></footnote> the old index method,
+	and if we are not searching for a string we simply use the old index
+	method.  Ruby makes it all so simple does it not?</para>
+    </sect1>
+
+    <sect1>
+	<title>Documentation of The <acronym>API</acronym> of The &rdsl;
+	Library</title>
+
+	<para>The documentation will be generated using Ruby's
+	<application>RDoc</application><footnote><para><ulink url="http://rdoc.sourceforge.net/">The <application>RDoc</application>
+	homepage</ulink></para></footnote>.  <application>RDoc</application> works similar to
+	<acronym>POD</acronym> for <acronym>Perl</acronym>, or &java;s
+	<acronym>Javadoc</acronym>. But it's even simpler.  You simply place
+	some comments about each method and class above its definition and it
+	will use it as the documentation.  It also generates
+	dependency/class-relationship graphs with the
+	<application>graphviz</application> graph-drawing software suite to
+	make the documentation even more accessible.</para>
+    </sect1>
+
+    <sect1>
+	<title>Testing of The Library</title>
+
+	<para>Unit testing will be used for testing the various parts of the
+	library.  There exists a very complete unit testing framework for Ruby
+	called <classname>Test::Unit</classname><footnote><para><ulink
+	url="http://testunit.talbott.ws/">The Test::Unit
+	homepage</ulink></para></footnote>.  It is much like the JUnit package
+	for &java; but a lot easier to work with, due to the fact that Ruby
+	supports <emphasis>Object-spaces</emphasis>, i.e. you can play around
+	with objects and enumerate over them and so on.  This means that
+	<classname>Test::Unit</classname> can find test-cases and wrap them up
+	into a test-suite without any further requirements from the
+	user<footnote><para>Take a look at <filename>src/debug.rb</filename>
+	and the files it <literal>require</literal>s to see how this is
+	used.</para></footnote>.</para>
+    </sect1>
+</chapter>
+
+<chapter id="chapter.work-done">
+    <title>Work Done So Far</title>
+
+    <para>This chapter describes the work that has been done on the &rdsl;
+    library so far.  At the moment since not much has actually
+    <emphasis>been</emphasis> done, and as the project is still in a rather
+    volatile state, much of this chapter will probably be revised and updated
+    with new information as the project progresses.  Still, it gives an idea of
+    in which direction the project is heading and will hopefully show some of
+    the thought that has gone into the design stage and validate the design
+    choices discussed earlier in this report.</para>
+
+    <sect1>
+	<title>What Has Been Written</title>
+
+	<para>So far, two Sorted Association &adt;s have been written,
+	<classname>Treap</classname> and <classname>Skiplist</classname>.  Both
+	<literal>include</literal> the <classname>SortedAssociation</classname>
+	mix-in which provide them with a consistent interface in effect the
+	same as that of Ruby's built-in <classname>Hash</classname> class.
+	<classname>SortedAssociation</classname> in its turn
+	<literal>include</literal>s <classname>Association</classname> which
+	defines the general interface for key-value association data
+	structures.  Finally, <classname>Association</classname>
+	<literal>include</literal>s the mix-in <classname>Container</classname>
+	which does not do much more than define the <methodname>empty?</methodname>
+	method, which tells whether or not the container is empty or
+	not.  For a diagram of the class structural layout, see <xref
+	linkend="fig.class-layout">.</para>
+
+	<para>The above layout is similar to that of both the &stl; and LEDA
+	(see <xref linkend="Mehlhorn99">).  It makes the implementation of both
+	<classname>Treap</classname> and <classname>Skiplist</classname>
+	straightforward.  All we need to implement in either is constructors,
+	<methodname>store</methodname> and <methodname>fetch</methodname> methods,
+	<methodname>clear</methodname> and <methodname>delete</methodname> methods, and
+	<methodname>each</methodname> and <methodname>length</methodname> methods.  All
+	the other are built up using these methods.  The exact interface for
+	these method is given in the documentation<footnote><para>See the
+	<filename>doc</filename> sub-dir of the &rdsl; distribution for
+	<acronym>HTML</acronym>-format documentation (auto-generated by
+	<application>RDoc</application>).</para></footnote>, but here follows a short
+	description of each of the methods.
+
+	<variablelist>
+	    <title>Method declarations for
+	    <classname>SortedAssociations</classname></title>
+
+	    <varlistentry>
+		<term><methodname>store</methodname>(<parameter>key</parameter>,
+		    <parameter>value</parameter>)</term>
+		<listitem><para>Associates <parameter>key</parameter> with
+		<parameter>value</parameter>.</para></listitem>
+	    </varlistentry>
+
+	    <varlistentry>
+		<term><methodname>fetch</methodname>(<parameter>key</parameter>)</term>
+		<listitem><para>Returns the value associated with
+		<parameter>key</parameter>.</para></listitem>
+	    </varlistentry>
+
+	    <varlistentry>
+		<term><methodname>clear</methodname></term>
+		<listitem><para>Deletes all key-value pairs.</para></listitem>
+	    </varlistentry>
+
+	    <varlistentry>
+		<term><methodname>delete</methodname>(<parameter>key</parameter>)</term>
+		<listitem><para>Deletes a key-value pair with key
+		<parameter>key</parameter>.</para></listitem>
+	    </varlistentry>
+
+	    <varlistentry>
+		<term><methodname>each</methodname> { |<parameter>key</parameter>,
+		<parameter>value</parameter>| &hellip; }</term>
+		<listitem><para>Executes the given block for each key-value
+		pair.</para></listitem>
+	    </varlistentry>
+
+	    <varlistentry>
+		<term><methodname>length</methodname></term>
+		<listitem><para>Returns the number of key-value pairs.
+		</para></listitem>
+	    </varlistentry>
+
+	</variablelist>
+
+	</para>
+
+	<para>With these simple requirements both <classname>Treap</classname>
+	and <classname>Skiplist</classname> weigh in at right over 200 lines of
+	code each.  Adding more &adt;s in the future should be rather easy
+	considering how easy it was to implement these two.</para>
+
+	<para>For the string searching algorithms the two algorithms mentioned
+	in <xref linkend="library-contents"> have been implemented.  Some
+	perhaps interesting running time comparisons between them, a brute
+	force algorithm written in Ruby, and Ruby's built-in one can be found
+	in <xref linkend="results">.  It is nothing out of the ordinary, but
+	for those interested, you can review the source code in
+	<filename>src/stringsearch.rb</filename>.</para>
+
+	<figure id="fig.class-layout">
+	    <title>&rdsl; Class Layout</title>
+	    <graphic fileref="pics/m_6_0">
+	</figure>
+    </sect1>
+
+    <sect1 id="results">
+	<title>Running Time Comparisons</title>
+	
+	<para>This section covers the running time comparisons conducted for
+	the &adt;s and algorithms in the library.  No extensive testing has
+	been conducted, so the figures may not be ultimately correct, but they
+	should give a general idea of how they size up.  Running time
+	calculations have been done for the built-in 'equivalents' of Ruby as
+	well so as to give an idea of the usefulness of writing extensions for
+	Ruby in Ruby.  As you will sadly see, the built-in's are far quicker
+	than their supposedly superior Ruby 'equivalents'.  This fact is
+	greatly due to the fact that Ruby is still an interpreted language with
+	no <emphasis>byte-code compilation</emphasis>.  This will change in the
+	future (version 2.0), but for now we will have to be content with these
+	results.</para>
+
+	<para>In <xref linkend="table.adt-comparisons"> we present times given
+	in seconds of the running times of inserting items into an &adt; and
+	then getting the values stored in a sorted array.  The test was run for
+	10<superscript>4</superscript> and 10<superscript>5</superscript>
+	elements 10 times each.  The values in the table represent an average
+	of the recorded times.</para>
+
+	<para>To analyze the data we can say immediately that Ruby's built-in
+	class <classname>Hash</classname> is by far the fastest for insertions.
+	This is of course due to the nature of the &adt;s. Hashes have an O(1)
+	insertion time cost, whereas the other two have a O(log
+	<emphasis>n</emphasis>) insertion time cost.
+	To get a sorted sequence of ten thousand values, however, the
+	<classname>Skiplist</classname> is close to
+	<classname>Hash</classname>.  The difference is most likely negligible
+	and thus makes it the best &adt; when the items must remain sorted.
+	<classname>Treap</classname> was rather slow in both cases, compared to
+	the other two; perhaps due to it's rather complicated tree-structural
+	nature.  Its upshot is that it takes less memory space than
+	<classname>Skiplist</classname>.</para>
+
+	<para>For the string search algorithms a trial search in a large search
+	space, 1 megabyte of characters, for a relatively short string, 8
+	characters long, was performed.  The <acronym>ASCII</acronym> character
+	set was used, so it was a small alphabet. These are rather favorable
+	conditions for the Boyer-Moore-Horspool algorithm, but represent
+	typical use. The search string occurred 19 times in the search space, and
+	thankfully all algorithms managed to find them all
+	<literal>;-)</literal>.  <xref linkend="table.search-comparisons">
+	shows the results of the running time test.  Again, running times are
+	displayed in seconds, and are the average of 10 trials.  As the data
+	will display, Ruby's built-in version is many orders faster than any of
+	the other algorithms.  Among the implemented algorithms,
+	Boyer-Moore-Horspool shows some potential, but Brute-Force is not very
+	far behind interestingly enough.  Of even more interest is that
+	Brute-Force is more than twice as fast as Knuth-Morris-Pratt.  The
+	reason for this is unknown, but apparently being optimal does not
+	always entail being fastest.</para>
+
+	<table id="table.adt-comparisons" frame="topbot" pgwide="1" tocentry="1">
+	    <title>Running Times of &adt;s in &rdsl; and Ruby</title>
+	    <tgroup cols="5" align="right">
+	    <colspec align="left">
+	    <thead>
+		<row>
+		    <entry><acronym>ADT</acronym></entry>
+		    <entry>10<superscript>4</superscript>
+			<methodname>store</methodname>s</entry>
+		    <entry><methodname>values</methodname> sorted</entry>
+		    <entry>10<superscript>5</superscript>
+			<methodname>store</methodname>s</entry>
+		    <entry><methodname>values</methodname> sorted</entry>
+		</row>
+	    </thead>
+	    <tbody>
+		<row>
+		    <entry>Treap</entry>
+		    <entry>2.039569</entry>
+		    <entry>0.212478</entry>
+		    <entry>31.761202</entry>
+		    <entry>1.527348</entry>
+		</row>
+		<row>
+		    <entry>Skiplist</entry>
+		    <entry>1.120891</entry>
+		    <entry>0.084353</entry>
+		    <entry>-<footnote><para>Sadly Ruby broke down with a
+		    <constant>SIGSEGV</constant> after 32000 inserts (a bug in
+		    Ruby?) so no timings could be calculated for this.</para>
+		    </footnote></entry>
+		    <entry>-<footnote><para>It is the authors belief that this
+		    would have been lower than the hash's running
+		    time.</para></footnote></entry>
+		</row>
+		<row>
+		    <entry>Hash</entry>
+		    <entry>0.114512</entry>
+		    <entry>0.071052</entry>
+		    <entry>1.421036</entry>
+		    <entry>0.867901</entry>
+		</row>
+	    </tbody>
+	    </tgroup>
+	</table>
+
+	<table id="table.search-comparisons" frame="topbot" pgwide="1" tocentry="1">
+	    <title>Running Times of String Search Algorithms in &rdsl; and
+	    Ruby</title>
+
+	    <tgroup cols=2 align="right">
+	    <colspec align="left">
+	    <thead>
+		<row>
+		    <entry><acronym>Algorithm</acronym></entry>
+		    <entry>Running Time</entry>
+		</row>
+	    </thead>
+	    <tbody>
+		<row>
+		    <entry>Brute-Force</entry>
+		    <entry>3.217383</entry>
+		</row>
+		<row>
+		    <entry>Boyer-Moore-Horspool</entry>
+		    <entry>2.241226</entry>
+		</row>
+		<row>
+		    <entry>Knuth-Morris-Pratt</entry>
+		    <entry>6.524701</entry>
+		</row>
+		<row>
+		    <entry>Built-In</entry>
+		    <entry>0.187414</entry>
+		</row>
+	    </tbody>
+	    </tgroup>
+	</table>
+    </sect1>
+
+</chapter>
+
+<chapter id="chapter.conclusion">
+    <title>Conclusion</title>
+
+    <para>We have seen that the programming language Ruby certainly has
+    potential for an algorithm and &adt; library.  The need and usefulness for
+    one is, however, a question of how soon we will see a byte-code compiler
+    for the language.  At the moment, the interpreted nature of the language
+    means that most things written in pure Ruby will run many orders slower
+    than those built into Ruby, which in turn is written in C, itself.  The
+    skiplist implementation did, however, show some potential as it was almost
+    as fast as Ruby's hash table class under certain conditions.  This, and the
+    fact that Ruby is constantly evolving, suggests that continuing the
+    development of the project will result in a usable library.  There are a
+    lot of things to consider for the future (to read about some <xref
+    linkend="chapter.future">) but it has been interesting work so far, and
+    hopefully it will continue to be.  A deeper understanding of both the &stl;
+    and of the LEDA package will perhaps be necessary, or at least beneficial,
+    if further development is to be made, and much thought must be placed on
+    exactly what should be part of the project and what should not.</para>
+
+    <para>A note about the implementation of the library.  A lot of the
+    actual code writing was easy to do.  Ruby lends itself to clean and simple
+    solutions, which has become clear during the development of the library.
+    <application>RDoc</application> was really good at creating the
+    documentation for the library, only requiring simple comments about the
+    various mix-ins, classes, and methods.  <classname>Test::Unit</classname>
+    was also useful in the testing of the project.  Its unit-testing strategy
+    proved easy to use, easy to run, and above all good at finding problems
+    with the code.  In the first run, 2 critical bugs were found and could
+    subsequently be closed.  With more extensive test cases, the integrity of
+    the library written so far can be maintained, as it is being extended (i.e.
+    regression testing).  All in all, as you may have gathered from the rest of
+    the paper, the author beliefs Ruby to have a lot of potential and that it
+    is a good platform for an algorithm and &adt; library.</para>
+
+</chapter>
+
+<!-- future: Ordered Hash Tables -->
+<chapter id="chapter.future">
+    <title>The Future</title>
+
+    <para>There are a lot of changes, additions, and extensions that can be
+    made to the library.  More &adt;s to be added, more algorithms to be
+    written, optimizations to be made.  Some of the thoughts on this topic are
+    given in this chapter.</para>
+
+    <sect1>
+	<title>Changes and Updates to the Library</title>
+
+	<para>More test scaffolding should be added so that the library can
+	be kept stable.  The work necessary for this should really be minimal.
+	Basically, more assertions about the workings of the library need to be
+	made, and most should be rather obvious.</para>
+
+	<para>Some updates to the &adt;s would be to implement finger searches
+	in the skiplist class.  It would be interesting to see if they are
+	useful enough to warrant their existence.  Another enhancement would
+	be in the random number generation.  Currently, new random numbers are
+	generated for every <methodname>store</methodname> call.  This is
+	unnecessary, at least for the skiplist class.  If the probability used
+	is 0.25, we can use some bit-shifting tricks to only use 2 bits of a 32
+	bit random number per <methodname>store</methodname> call.  In the original
+	design specification, random number generators were going to be a part
+	of the library.  Sadly, there was no time to complete this part, but
+	perhaps this can be done in the future (a lot of information on the
+	topic can be found in <xref linkend="Knuth98">).  We will then see if
+	there are better generators for our needs, than the one built into
+	Ruby.</para>
+
+	<para>The string searching algorithms proved to be too slow to be
+	useful in real applications.  Perhaps they will be faster in the
+	future, but for now they are of little interest in the library.  Thus,
+	this part of the library will most likely be put on ice for some time.
+	</para>
+    </sect1>
+
+    <sect1>
+	<title>Additions and Extensions to the Library</title>
+
+	<para>In the future we will probably see more special purpose &adt;s
+	such as Ordered Hash Tables <xref linkend="Knuth00"> which we can
+	compare to the other ones implemented so far, a Linked List
+	implementation which may be useful as Ruby's built-in
+	<classname>Array</classname> class does a lot of reallocating under
+	certain circumstances, a Priority Queue/Heap class which can have its
+	uses, for example with graph algorithms; which may also be of interest
+	to extend the library with.  There exists a graph related library for
+	Ruby already, so maybe a merger with it may prove more useful than
+	writing everything from scratch though.</para>
+	
+	<para>Perhaps multi- versions of the &adt;s can be useful; &stl; has
+	them.  LEDA has algorithms dealing with merger, removal of
+	subparts, and splitting of &adt;s which may also be useful for certain
+	applications.  These can easily be added to
+	<classname>SortedAssociation</classname> or similar, as necessary.
+	Deques <xref linkend="Knuth97"> exist in the &stl; and may have its
+	uses.  Ruby's built-in array class can act as a deque, but it may not
+	be optimal to use it in that way.</para>
+    </sect1>
+</chapter>
+
+<bibliography>
+<title>Bibliography</title>
+
+<bibliodiv>
+    <title>Books</title>
+
+    <biblioentry id="Gamma95" xreflabel="[Gamma95]">
+	<abbrev>Gamma95</abbrev>
+	<authorgroup>
+	<author><firstname>Erich</firstname><surname>Gamma</surname></author>
+	<author><firstname>Richard</firstname><surname>Helm</surname></author>
+	<author><firstname>Ralph</firstname><surname>Johnson</surname></author>
+	</authorgroup>
+	<title>Design Patterns</title>
+	<subtitle>Micro-architectures for Reusable Object-oriented
+	Software</subtitle>
+	<isbn>0-201-63361-2</isbn>
+	<publisher>
+	    <publishername>Pearson Professional Education</publishername>
+	</publisher>
+	<pubdate>14th December 1994</pubdate>
+	<pagenums>p257-271</pagenums>
+    </biblioentry>
+
+    <biblioentry id="Knuth97" xreflabel="[Knuth97]">
+	<abbrev>Knuth97</abbrev>
+	<author><firstname>Donald</firstname><surname>Knuth</surname>
+	    <othername role="mi">E.</othername></author>
+	<title>The Art of Computer Programming</title>
+	<volumenum>Volume 1</volumenum>
+	<subtitle>Fundamental Algorithms</subtitle>
+	<edition>Third Edition</edition>
+	<isbn>0-201-89683-4</isbn>
+	<publisher>
+	    <publishername>Addison Wesley Longman, Inc.</publishername>
+	</publisher>
+	<pubdate>1997</pubdate>
+	<pagenums>p238-242</pagenums>
+    </biblioentry>
+
+    <biblioentry id="Knuth98" xreflabel="[Knuth98]">
+	<abbrev>Knuth98</abbrev>
+	<author><firstname>Donald</firstname><surname>Knuth</surname>
+	    <othername role="mi">E.</othername></author>
+	<title>The Art of Computer Programming</title>
+	<volumenum>Volume 2</volumenum>
+	<subtitle>Seminumerical Algorithms</subtitle>
+	<edition>Third Edition</edition>
+	<isbn>0-201-89684-2</isbn>
+	<publisher>
+	    <publishername>Addison Wesley Longman, Inc.</publishername>
+	</publisher>
+	<pubdate>1998</pubdate>
+	<pagenums>p1-184</pagenums>
+    </biblioentry>
+
+    <biblioentry id="Knuth00" xreflabel="[Knuth00]">
+	<abbrev>Knuth00</abbrev>
+	<author><firstname>Donald</firstname><surname>Knuth</surname>
+	    <othername role="mi">E.</othername></author>
+	<title>Selected Papers on Analysis of Algorithms</title>
+	<isbn>1-57586-212-3</isbn>
+	<publisher>
+	    <publishername>Center for the Study of Language and
+	    Information, Leland Stanford Junior University</publishername>
+	</publisher>
+	<pubdate>2000</pubdate>
+	<pagenums>p77-99</pagenums>
+    </biblioentry>
+
+    <biblioentry id="Matsumoto02" xreflabel="[Mats02]">
+	<abbrev>Mats02</abbrev>
+	<author>
+	    <firstname>Yukihiro</firstname>
+	    <surname>Matsumoto</surname>
+	    <othername role="mi">'Matz'</othername>
+	</author>
+	<title>Ruby In A Nutshell</title>
+	<subtitle>A Desktop Quick Reference</subtitle>
+	<edition>First Edition</edition>
+	<isbn>0-596-00214-9</isbn>
+	<publisher>
+	    <publishername>O'Reilly &amp; Associates, Inc.</publishername>
+	    <address>
+		<street>1005 Gravenstein Highway North</street>
+		<city>Sebastopol</city>
+		<state>CA</state>
+		<postcode>95472</postcode>
+		<country>USA</country>
+	    </address>
+	</publisher>
+	<pubdate>January 2002</pubdate>
+	<pagenums>p31, p64-67, p67-69</pagenums>
+    </biblioentry>	
+
+    <biblioentry id="Mehlhorn99" xreflabel="[Mehl99]">
+	<abbrev>Mehl99</abbrev>
+	<authorgroup>
+	<author><firstname>Kurt</firstname><surname>Mehlhorn</surname></author>
+	<author><firstname>Stefan</firstname><surname>N&auml;her</surname></author>
+	</authorgroup>
+	<title>LEDA</title>
+	<subtitle>A platform for combinatorial and geometric
+	computing</subtitle>
+	<isbn>0-521-563291</isbn>
+	<publisher>
+	    <publishername>The Press Syndicate of The University of
+	    Cambridge</publishername>
+	    <address>
+		<street>40 West 20th Street</street>
+		<city>New York</city>
+		<state>NY</state>
+		<postcode>10011-4211</postcode>
+		<country>USA</country>
+	    </address>
+	</publisher>
+	<pubdate>1999</pubdate>
+	<pagenums>p196-227</pagenums>
+    </biblioentry>
+
+    <biblioentry id="Mora95" xreflabel="[Mora95]">
+	<abbrev>Mora95</abbrev>
+	<authorgroup>
+	<author><firstname>R.</firstname><surname>Motwani</surname></author>
+	<author><firstname>P.</firstname><surname>Raghavan</surname></author>
+	</authorgroup>
+	<title>Randomized Algorithms</title>
+	<publisher>
+	    <publishername>The Press Syndicate of The University of
+	    Cambridge</publishername>
+	    <address>
+		<street>40 West 20th Street</street>
+		<city>New York</city>
+		<state>NY</state>
+		<postcode>10011-4211</postcode>
+		<country>USA</country>
+	    </address>
+	</publisher>
+	<pubdate>1995</pubdate>
+	<pagenums>p197-208, 209-213</pagenums>
+    </biblioentry>
+
+</bibliodiv>
+
+<bibliodiv>
+    <title>Articles</title>
+
+    <biblioentry id="Reid98" xreflabel="[Reid98]">
+	<abbrev>Reid98</abbrev>
+	<title>Fast Set Operations Using Treaps</title>
+	<authorgroup>
+	<author><firstname>Guy</firstname><surname>Blelloch</surname><othername
+	role="mi">E.</othername></author>
+	<author><firstname>Margaret</firstname>
+	<surname>Reid-Miller</surname></author>
+	</authorgroup>
+	<title>Proceedings of the 10th Annual ACM Symposium on Parallel
+	Algorithms and Architectures</title>
+	<pubdate>June 1998</pubdate>
+	<pagenums>p16-26</pagenums>
+    </biblioentry>
+
+    <biblioentry id="Nils97" xreflabel="[Nils97]">
+	<abbrev>Nils97</abbrev>
+	<title>Treaps in Java</title>
+	<author>
+	    <firstname>Stefan</firstname><surname>Nilsson</surname>
+	</author>
+	<title>Dr. Dobb's Journal</title>
+	<volumenum>vol. 267</volumenum>
+	<pubdate>July 1997</pubdate>
+	<pagenums>p40-44</pagenums>
+    </biblioentry>
+
+</bibliodiv>
+
+</bibliography>
+
+</book>
